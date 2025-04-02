@@ -1,28 +1,38 @@
 .model SMALL
 .STACK 10h
 .DATA
+
+    horizontal_lines db 0Dh, 0Ah,'--------------------------------------$'
     enter_msg db 'This program will work with arrays, choose your option',0Dh,0Ah, '$'
     option_1_msg db '1 => work with one-dimensional array',0Dh,0Ah, '$'
     option_2_msg db '2 => work with two-dimensional array',0Dh,0Ah, '$'
     option_3_msg db '3 => exit program',0Dh,0Ah, '$'
     new_line db 0Dh,0Ah, '$'
     option_msg db 'Choose your option:$'
+    continue_msg_array db 0Dh,0Ah,'Press anything to continue...$'
+
     ;One dimensional array options
+
+    array_msg db 'Array: $'
+    sum_array_smg db 'The sum of array: $'
 
     biggest_value_msg db 0Dh,0Ah,'The biggest value in array:$'
     smallest_value_msg db 0Dh,0Ah,'The smallest value in array:$'
 
     enter_1d_array_msg db 'Enter the size of array[1;10]:$'
+
     option1_1d_array_msg db '1 => find sum of array',0Dh,0Ah, '$'
     option2_1d_array_msg db '2 => find the biggest value',0Dh,0Ah, '$'
     option3_1d_array_msg db '3 => find the smallest value',0Dh,0Ah, '$'
     option4_1d_array_msg db '4 => sort array',0Dh,0Ah, '$'
-    option5_1d_array_msg db '5 => print array',0Dh,0Ah, '$'
-    option6_1d_array_msg db '6 => return to main',0Dh,0Ah, '$'
+    option6_1d_array_msg db '5 => return to main',0Dh,0Ah, '$'
 
     out_of_range_error_msg db 0Dh, 0Ah,'Error: out of range',0Dh, 0Ah, '$'
     error_msg db 0Dh, 0Ah,'Error: invalid input',0Dh, 0Ah, '$'
     size_error_msg db 0Dh, 0Ah,'Error: invalid size',0Dh, 0Ah, '$'
+    option_error_msg db 'Error: invalid option$'
+
+
     ;Two dimensional array options
     enter_2d_array_rows_msg db 'Enter the count of rows in array[1;10]:$'
     enter_2d_array_columns_msg db 'Enter the count of columns in array[1;10]:$'
@@ -30,6 +40,7 @@
     option2_2d_array_msg db '2 => print array',0Dh,0Ah, '$'
 
     input_1d_array_msg db 'Enter number$'
+    pre_input_1d_array_msg db 0Ah, 0Dh,'Enter number in range[-999;999]:$'
     array dw 10 dup(2)
     array_size dw 0
     
@@ -55,7 +66,7 @@
     matrix_rows db 0
     matrix_columns db 0
 
-    enterData db 4, ?, 4 dup("?")
+    enterData db 5, ?, 5 dup("?")
     accumulator dw 0
     is_neg db 0
     is_not_valid db 0
@@ -69,6 +80,9 @@ START:
     mov ds, ax
 
     program_loop:
+        mov ax, 0003h
+        int 10h
+
         call enter_msg_print
         mov dx , offset option
         mov ah , 0Ah
@@ -87,6 +101,21 @@ START:
         cmp option+2, '3'
         je exit_program
 
+        jmp invalid_option
+
+        invalid_option:
+            mov dx, offset option_error_msg
+            mov ah, 09h
+            int 21h
+
+            mov dx, offset continue_msg_array
+            int 21h
+
+            mov ah, 08h
+            int 21h
+
+            jmp program_loop
+
         one_dimensional_array:
             call array_1d_logic
             jmp program_loop
@@ -95,19 +124,7 @@ START:
         
         two_dimensional_array:
 
-        is_continue:
-        mov ah, 9
-        mov dx, offset continue_msg
-        int 21h
-
-        mov dx, offset continue_input
-        mov ah, 0Ah
-        int 21h
-
-        cmp continue_input+2, 'y'
-        jne exit_program
-        jmp program_loop
-
+        
     exit_program:
     mov ax, 4C00h
     int 21h
@@ -150,11 +167,10 @@ enter_msg_array_1d proc
     mov dx, offset option4_1d_array_msg
     int 21h
 
-    mov dx, offset option5_1d_array_msg
-    int 21h
-    ret
-
     mov dx, offset option6_1d_array_msg
+    int 21h
+
+    mov dx, offset option_msg
     int 21h
     ret
 
@@ -193,7 +209,7 @@ scan_parse proc
             cmp is_neg, 1  
             je before_parse_loop
 
-            cmp enterData+1, 2
+            cmp enterData+1, 3
             jg check_zero
             jmp before_parse_loop
             
@@ -279,6 +295,9 @@ scan_1d_array proc
                 int 21h
 
                 call scan_parse
+                cmp is_not_valid, 1
+                je array_size_loop
+
                 cmp ax, 1
                 jl invalid_size_error
 
@@ -299,12 +318,17 @@ scan_1d_array proc
             mov array_number, '1'
             mov si_counter, 0
 
+            mov ah, 09h
+            mov dx, offset pre_input_1d_array_msg
+            int 21h
+
             array_input_loop:
                 mov dx, offset new_line
                 mov ah, 09h
                 int 21h
 
                 mov dx, offset input_1d_array_msg
+                mov ah, 09h
                 int 21h
 
                 mov dl, array_number
@@ -337,6 +361,9 @@ endp scan_1d_array
 print_1d_array proc
     mov dx, offset new_line
     mov ah, 09h
+    int 21h
+
+    mov dx, offset array_msg
     int 21h
 
     mov cx, array_size
@@ -410,6 +437,9 @@ find_sum_of_array proc
             mov ah, 09h
             int 21h
             
+            mov dx, offset sum_array_smg
+            int 21h
+
             mov ax, save_num
             call parse_print_num
             ret
@@ -462,6 +492,20 @@ array_1d_logic proc
     call scan_1d_array
 
     after_input:
+
+    mov ax, 0003h
+    int 10h  
+    
+    mov dx, offset horizontal_lines
+    mov ah, 09h
+    int 21h
+
+    call print_1d_array
+
+    mov dx, offset horizontal_lines
+    mov ah, 09h
+    int 21h
+
     call enter_msg_array_1d
     mov dx, offset option
     mov ah, 0Ah
@@ -480,14 +524,17 @@ array_1d_logic proc
     je sort_1d_array_jump
 
     cmp option+2, '5'
-    je print_1d_array_jump
-
-    cmp option+2, '6'
     je end_1d_array
+
+    
+    mov dx, offset error_msg
+    mov ah, 09h
+    int 21h
+    jmp array_1d_logic
 
     find_sum_of_array_jump:
         call find_sum_of_array
-        jmp one_dimensional_array
+        jmp continue_jump
 
     find_biggest_value_jump:
         call find_biggest_value
@@ -500,12 +547,11 @@ array_1d_logic proc
         mov ax, save_num
 
         call parse_print_num
-        jmp one_dimensional_array
+        jmp continue_jump
 
     sort_1d_array_jump:
         call sort_1d_array
-        call print_1d_array
-        jmp one_dimensional_array
+        jmp array_1d_logic
 
     find_smallest_value_jump:
         call find_smallest_value
@@ -518,12 +564,17 @@ array_1d_logic proc
         mov ax, save_num
 
         call parse_print_num
-        jmp one_dimensional_array
-
-    print_1d_array_jump:
-        call print_1d_array
-        jmp one_dimensional_array
+        jmp continue_jump
     
+    continue_jump:
+        mov dx, offset continue_msg_array
+        mov ah, 09h
+        int 21h
+
+        mov ah, 08h
+        int 21h
+        jmp array_1d_logic
+
     end_1d_array:
         mov dx, offset new_line
         mov ah, 09h
@@ -537,32 +588,30 @@ sort_1d_array proc
     cmp array_size, 1
     jle end_sort_func
 
-    mov bx, array_size
-    dec bx
+    mov cx, array_size
+    dec cx
+
     outer_loop:
         mov si, 0
-        mov di, 2 
-        inner_lopp:
+        mov sort_inner_counter, 0
+        inner_loop:
             mov ax, array[si]
-            cmp ax, array[di]
+            mov bx, array[si+2]
+            cmp ax, bx
             jl end_inner_loop
 
-            push array[di]
-            mov array[di], ax
-            pop ax
-            mov array[si], ax
-
+            mov array[si], bx
+            mov array[si+2], ax
 
             end_inner_loop:
                 add si, 2
-                add di, 2
                 add sort_inner_counter, 1
 
-                cmp sort_inner_counter, bx
-                jl inner_lopp
+                cmp sort_inner_counter, cx
+                jl inner_loop
 
         add sort_outer_counter, 1
-        cmp sort_outer_counter, bx
+        cmp sort_outer_counter, cx
         jl outer_loop
 
     end_sort_func:

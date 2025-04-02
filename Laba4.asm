@@ -35,6 +35,10 @@
     
     si_counter dw 0
 
+    sort_outer_counter dw 0
+    sort_inner_counter dw 0
+
+
     is_array_input db 0
 
     array_counter dw 0
@@ -84,72 +88,8 @@ START:
         je exit_program
 
         one_dimensional_array:
-            cmp is_array_input, 1
-            je after_input
-
-            call scan_1d_array
-
-            after_input:
-            call enter_msg_array_1d
-            mov dx, offset option
-            mov ah, 0Ah
-            int 21h
-
-            cmp option+2, '1'
-            je find_sum_of_array_jump
-            
-            cmp option+2, '2'
-            je find_biggest_value_jump
-
-            cmp option+2, '3'
-            je find_smallest_value_jump
-
-            cmp option+2, '5'
-            je print_1d_array_jump
-
-            cmp option+2, '6'
-            je end_1d_array
-
-            find_sum_of_array_jump:
-                call find_sum_of_array
-                jmp one_dimensional_array
-
-            find_biggest_value_jump:
-                call find_biggest_value
-                mov save_num, ax
-
-                mov dx, offset biggest_value_msg
-                mov ah, 09h
-                int 21h
-
-                mov ax, save_num
-
-                call parse_print_num
-                jmp one_dimensional_array
-
-            find_smallest_value_jump:
-                call find_smallest_value
-                mov save_num, ax
-
-                mov dx, offset smallest_value_msg
-                mov ah, 09h
-                int 21h
-
-                mov ax, save_num
-
-                call parse_print_num
-                jmp one_dimensional_array
-
-            print_1d_array_jump:
-                call print_1d_array
-                jmp one_dimensional_array
-            
-            end_1d_array:
-                mov dx, offset new_line
-                mov ah, 09h
-                int 21h
-                mov is_array_input, 0
-                jmp program_loop
+            call array_1d_logic
+            jmp program_loop
             
 
         
@@ -213,6 +153,11 @@ enter_msg_array_1d proc
     mov dx, offset option5_1d_array_msg
     int 21h
     ret
+
+    mov dx, offset option6_1d_array_msg
+    int 21h
+    ret
+
     endp enter_msg_array_1d
 
 scan_parse proc
@@ -497,15 +442,130 @@ find_smallest_value proc
 
     mov ax, array[si]
     add si, 2
-    array_loop:
+    array_loop_smallest:
         cmp ax, array[si]
-        jle skip
+        jle skip_smallest
 
         mov ax, array[si]
 
-        skip:
+        skip_smallest:
         add si, 2
-    loop array_loop
+    loop array_loop_smallest
     ret
 endp find_smallest_value
+
+array_1d_logic proc
+
+    cmp is_array_input, 1
+    je after_input
+
+    call scan_1d_array
+
+    after_input:
+    call enter_msg_array_1d
+    mov dx, offset option
+    mov ah, 0Ah
+    int 21h
+
+    cmp option+2, '1'
+    je find_sum_of_array_jump
+    
+    cmp option+2, '2'
+    je find_biggest_value_jump
+
+    cmp option+2, '3'
+    je find_smallest_value_jump
+
+    cmp option+2, '4'
+    je sort_1d_array_jump
+
+    cmp option+2, '5'
+    je print_1d_array_jump
+
+    cmp option+2, '6'
+    je end_1d_array
+
+    find_sum_of_array_jump:
+        call find_sum_of_array
+        jmp one_dimensional_array
+
+    find_biggest_value_jump:
+        call find_biggest_value
+        mov save_num, ax
+
+        mov dx, offset biggest_value_msg
+        mov ah, 09h
+        int 21h
+
+        mov ax, save_num
+
+        call parse_print_num
+        jmp one_dimensional_array
+
+    sort_1d_array_jump:
+        call sort_1d_array
+        call print_1d_array
+        jmp one_dimensional_array
+
+    find_smallest_value_jump:
+        call find_smallest_value
+        mov save_num, ax
+
+        mov dx, offset smallest_value_msg
+        mov ah, 09h
+        int 21h
+
+        mov ax, save_num
+
+        call parse_print_num
+        jmp one_dimensional_array
+
+    print_1d_array_jump:
+        call print_1d_array
+        jmp one_dimensional_array
+    
+    end_1d_array:
+        mov dx, offset new_line
+        mov ah, 09h
+        int 21h
+        mov is_array_input, 0
+        ret
+
+endp array_1d_logic
+
+sort_1d_array proc 
+    cmp array_size, 1
+    jle end_sort_func
+
+    mov bx, array_size
+    dec bx
+    outer_loop:
+        mov si, 0
+        mov di, 2 
+        inner_lopp:
+            mov ax, array[si]
+            cmp ax, array[di]
+            jl end_inner_loop
+
+            push array[di]
+            mov array[di], ax
+            pop ax
+            mov array[si], ax
+
+
+            end_inner_loop:
+                add si, 2
+                add di, 2
+                add sort_inner_counter, 1
+
+                cmp sort_inner_counter, bx
+                jl inner_lopp
+
+        add sort_outer_counter, 1
+        cmp sort_outer_counter, bx
+        jl outer_loop
+
+    end_sort_func:
+    ret
+endp sort_1d_array
 END START

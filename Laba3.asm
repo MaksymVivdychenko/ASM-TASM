@@ -28,10 +28,8 @@
     of_flag db 0
 
     is_not_valid db 0
-    is_result_neg db 0
     is_neg db 0
     is_not_int db 0 
-    is_neg_num db 0
 
     counter_for_print db 0
 .CODE
@@ -97,7 +95,6 @@ clear_values proc
     mov accumulator, 0
     mov is_not_valid, 0
     mov is_neg, 0
-    mov is_result_neg, 0
     mov is_not_int, 0
     mov numerator, 0
     mov denumerator, 0
@@ -368,12 +365,14 @@ second_equation_proc proc
     mov dx, 0
 
     mov ax, x
+    inc ax
+
     CWD
+
     mov bx, x
     
     neg bx
     
-    inc ax
     inc bx
 
     idiv bx
@@ -438,4 +437,3 @@ overflow_error proc
     ret
 endp overflow_error
 END START
-;почистить непотрібні змінні, якщо вони є!!!

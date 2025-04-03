@@ -21,6 +21,8 @@
 
     enter_1d_array_msg db 'Enter the size of array[1;10]:$'
 
+
+
     option1_1d_array_msg db '1 => find sum of array',0Dh,0Ah, '$'
     option2_1d_array_msg db '2 => find the biggest value',0Dh,0Ah, '$'
     option3_1d_array_msg db '3 => find the smallest value',0Dh,0Ah, '$'
@@ -34,16 +36,20 @@
 
 
     ;Two dimensional array options
-    enter_2d_array_rows_msg db 'Enter the count of rows in array[1;10]:$'
-    enter_2d_array_columns_msg db 'Enter the count of columns in array[1;10]:$'
+    enter_2d_array_rows_msg db 'Enter the count of rows in array[1;5]:$'
+    enter_2d_array_columns_msg db 'Enter the count of columns in array[1;5]:$'
     option1_2d_array_msg db '1 => find all coordinates of value in array',0Dh,0Ah, '$'
-    option2_2d_array_msg db '2 => print array',0Dh,0Ah, '$'
+    option2_2d_array_msg db '2 => return to main',0Dh,0Ah, '$'
+    coordinates_value_msg db 'The coordinates of value in array:$'
+
+    find_coordinates_2d_msg db 'Enter value:$'
 
     input_1d_array_msg db 'Enter number$'
     pre_input_1d_array_msg db 0Ah, 0Dh,'Enter number in range[-999;999]:$'
-    array dw 10 dup(2)
+    array dw 25 dup(2)
     array_size dw 0
     
+
     si_counter dw 0
 
     sort_outer_counter dw 0
@@ -57,14 +63,10 @@
 
     save_num dw 0
 
-    matrix  dw 5 dup(5 dup(0))
-            dw 5 dup(5 dup(0))
-            dw 5 dup(5 dup(0))
-            dw 5 dup(5 dup(0))
-            dw 5 dup(5 dup(0))
+    matrix  dw 25 dup(3)
 
-    matrix_rows db 0
-    matrix_columns db 0
+    matrix_rows dw 0
+    matrix_columns dw 0
 
     enterData db 5, ?, 5 dup("?")
     accumulator dw 0
@@ -74,6 +76,15 @@
     option db 2, ?, 2 dup("?")
     continue_msg db 'Do you want to continue? (y/n)',0Dh, 0Ah, '$'
     continue_input db 2, ?, 2 dup("?")
+
+
+    max_range dw 0
+    min_range dw 0
+
+    array_loop_counter dw 0
+    array_2d_row_counter_print db 0
+    array_2d_column_counter_print db 0
+
 .CODE
 START:
     mov ax, @DATA
@@ -123,6 +134,8 @@ START:
 
         
         two_dimensional_array:
+            call array_2d_logic
+            jmp program_loop
 
         
     exit_program:
@@ -180,6 +193,7 @@ scan_parse proc
         mov accumulator, 0 
         mov is_not_valid, 0
         mov is_neg, 0
+        push dx
         mov dx, offset enterData
         mov ah, 0Ah
         int 21h
@@ -249,6 +263,7 @@ scan_parse proc
         neg ax
 
         end_scan_parse:
+        pop dx
         ret
         endp scan_parse
 
@@ -590,7 +605,7 @@ sort_1d_array proc
 
     mov cx, array_size
     dec cx
-
+    mov sort_outer_counter, 0
     outer_loop:
         mov si, 0
         mov sort_inner_counter, 0
@@ -617,4 +632,331 @@ sort_1d_array proc
     end_sort_func:
     ret
 endp sort_1d_array
+
+;2d array functions
+scan_2d_array proc 
+    array_rows:
+        mov min_range, 1
+        mov max_range, 5
+        mov dx, offset enter_2d_array_rows_msg
+        call scan_single_value
+    mov matrix_rows, ax
+    
+    array_columns:
+        mov min_range, 1
+        mov max_range, 5
+        mov dx, offset enter_2d_array_columns_msg
+        call scan_single_value
+
+    mov matrix_columns, ax
+    mov ax, matrix_rows
+    mul matrix_columns
+
+    mov array_size, ax
+
+    after_size_input_2d:
+            mov array_size, ax
+            mov cx, ax
+
+            mov array_loop_counter, 0
+            mov si, 0
+            mov si_counter, 0
+
+            mov ah, 09h
+            mov dx, offset pre_input_1d_array_msg
+            int 21h
+
+            array_input_loop_2d:
+                mov dx, offset new_line
+                mov ah, 09h
+                int 21h
+
+                mov dx, offset input_1d_array_msg
+                mov ah, 09h
+                int 21h
+                
+                mov dl, '['
+                mov ah, 02h
+                int 21h
+
+                mov ax, array_loop_counter
+                mov bx, matrix_columns
+
+                xor dx, dx
+                div bx
+
+                mov array_2d_row_counter_print, al
+                mov array_2d_column_counter_print, dl
+
+                mov dl, array_2d_row_counter_print
+                add dl, '0'
+                mov ah, 02h
+                int 21h
+
+                mov dl, ']'
+                int 21h
+
+                mov dl, '['
+                int 21h
+
+                mov dl, array_2d_column_counter_print
+                add dl, '0'
+                mov ah, 02h
+                int 21h
+
+                mov dl, ']'
+                int 21h
+
+                mov dl, ':'
+                int 21h
+
+                mov array_counter, cx
+                call scan_parse
+                mov cx, array_counter
+
+                cmp is_not_valid, 1
+                je array_input_loop_2d
+
+                mov si, si_counter
+                mov array[si], ax
+
+                add si_counter, 2
+                add array_loop_counter, 1
+            loop array_input_loop_2d
+    ret
+endp scan_2d_array
+
+print_2d_array proc
+    mov si, 0
+    mov cx, array_size
+
+    mov dx, offset new_line
+    mov ah, 09h
+    int 21h
+
+    mov array_loop_counter, 0
+
+    print_2d_loop:
+        new_line_checker:
+        mov dx, 0
+        mov ax, array_loop_counter
+        div matrix_columns
+
+        cmp dx, 0
+        jne continue_print_2d_loop
+        
+        mov dx, offset new_line
+        mov ah, 09h
+        int 21h
+
+        continue_print_2d_loop:
+            mov ax, array[si]
+            mov array_counter, cx
+            call parse_print_num
+            mov cx, array_counter
+            
+            mov dl, ' '
+            mov ah, 02h
+            int 21h
+
+            mov dl, ' '
+            mov ah, 02h
+            int 21h
+
+        add array_loop_counter, 1
+        add si,2
+    loop print_2d_loop
+
+    mov dx, offset new_line
+    mov ah, 09h 
+    int 21h
+    ret
+endp print_2d_array
+array_2d_logic proc 
+    cmp is_array_input, 1
+    je after_input_2d
+
+    call scan_2d_array
+    mov is_array_input, 1
+
+    after_input_2d:
+
+    mov ax, 0003h
+    int 10h  
+    
+    mov dx, offset horizontal_lines
+    mov ah, 09h
+    int 21h
+
+    call print_2d_array
+
+    mov dx, offset horizontal_lines
+    mov ah, 09h
+    int 21h
+    
+    call enter_msg_array_2d
+
+    mov dx, offset option_msg
+    mov ah, 09h
+    int 21h
+
+    mov dx, offset option
+    mov ah, 0Ah
+    int 21h
+
+    cmp option+2, '1'
+    je find_coordinates_for_value
+    
+    cmp option+2, '2'
+    je return_to_main_jump
+
+    mov dx, offset error_msg
+    mov ah, 09h
+    int 21h
+    jmp array_2d_logic
+
+    continue_jump_2d:
+    mov dx, offset continue_msg_array
+    mov ah, 09h
+    int 21h
+
+    mov ah, 08h
+    int 21h
+    jmp array_2d_logic
+    
+    find_coordinates_for_value:
+        call find_coordinates_2d
+        jmp continue_jump_2d
+
+    return_to_main_jump:
+        mov is_array_input, 0
+        ret
+endp array_2d_logic
+
+enter_msg_array_2d proc
+
+    mov dx, offset new_line
+    mov ah, 09h
+    int 21h
+
+    mov dx, offset option1_2d_array_msg
+    int 21h
+
+    mov dx, offset option2_2d_array_msg
+    int 21h 
+ret
+endp enter_msg_array_2d
+
+find_coordinates_2d proc
+    mov min_range, -999
+    mov max_range, 999
+
+    mov dx, offset find_coordinates_2d_msg
+    call scan_single_value
+
+    push ax
+
+    mov dx, offset new_line
+    mov ah, 09h
+    int 21h
+
+    mov dx, offset coordinates_value_msg
+    mov ah, 09h
+    int 21h
+
+    pop ax
+
+    mov cx, array_size
+    mov array_loop_counter, 0
+    mov si, 0
+
+
+    find_coordinates_loop:
+        cmp array[si], ax
+        je print_coordinates
+        jne end_find_coordinates_loop
+
+        print_coordinates:
+            push ax
+
+            mov dl, ' '
+            mov ah, 02h
+            int 21h
+
+            mov dl, '['
+            mov ah, 02h
+            int 21h
+
+            mov ax, array_loop_counter
+            mov bx, matrix_columns
+
+            xor dx, dx
+            div bx
+
+            mov array_2d_row_counter_print, al
+            mov array_2d_column_counter_print, dl
+
+            mov dl, array_2d_row_counter_print
+            add dl, '0'
+            mov ah, 02h
+            int 21h
+
+            mov dl, ']'
+            int 21h
+
+            mov dl, '['
+            int 21h
+
+            mov dl, array_2d_column_counter_print
+            add dl, '0'
+            mov ah, 02h
+            int 21h
+
+            mov dl, ']'
+            int 21h
+
+            pop ax
+
+    end_find_coordinates_loop:
+        add array_loop_counter, 1
+        add si, 2
+        loop find_coordinates_loop   
+ret
+endp find_coordinates_2d
+
+;Additional functions
+; dx - string
+ scan_single_value proc 
+    input_value_loop:
+        push dx
+        mov dx, offset new_line
+        mov ah, 09h
+        int 21h
+
+        pop dx
+        int 21h
+
+        call scan_parse
+        cmp is_not_valid, 1
+        je input_value_loop
+
+        cmp ax, min_range
+        jl input_value_loop
+
+
+        cmp ax, max_range
+        jg invalid_size_error_scan
+        
+        jmp end_scan_single_value
+        invalid_size_error_scan:
+            push dx 
+            mov dx, offset out_of_range_error_msg
+            mov ah, 09h
+            int 21h
+            pop dx
+            jmp input_value_loop
+        
+        end_scan_single_value:
+            ret
+endp scan_single_value
 END START

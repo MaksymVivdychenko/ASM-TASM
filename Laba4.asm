@@ -21,14 +21,13 @@
 
     enter_1d_array_msg db 'Enter the size of array[1;10]:$'
 
-
-
     option1_1d_array_msg db '1 => find sum of array',0Dh,0Ah, '$'
     option2_1d_array_msg db '2 => find the biggest value',0Dh,0Ah, '$'
     option3_1d_array_msg db '3 => find the smallest value',0Dh,0Ah, '$'
     option4_1d_array_msg db '4 => sort array',0Dh,0Ah, '$'
     option6_1d_array_msg db '5 => return to main',0Dh,0Ah, '$'
 
+    ;errors
     out_of_range_error_msg db 0Dh, 0Ah,'Error: out of range',0Dh, 0Ah, '$'
     error_msg db 0Dh, 0Ah,'Error: invalid input',0Dh, 0Ah, '$'
     size_error_msg db 0Dh, 0Ah,'Error: invalid size',0Dh, 0Ah, '$'
@@ -50,6 +49,7 @@
     array_size dw 0
     
 
+    ;counters
     si_counter dw 0
 
     sort_outer_counter dw 0
@@ -60,22 +60,21 @@
 
     array_counter dw 0
     array_number db 0
+    ;counters
 
     save_num dw 0
-
-    matrix  dw 25 dup(3)
 
     matrix_rows dw 0
     matrix_columns dw 0
 
+    ;for scan values
     enterData db 5, ?, 5 dup("?")
     accumulator dw 0
     is_neg db 0
     is_not_valid db 0
+    ;for scan values
 
     option db 2, ?, 2 dup("?")
-    continue_msg db 'Do you want to continue? (y/n)',0Dh, 0Ah, '$'
-    continue_input db 2, ?, 2 dup("?")
 
 
     max_range dw 0
@@ -189,143 +188,13 @@ enter_msg_array_1d proc
 
     endp enter_msg_array_1d
 
-scan_parse proc
-        mov accumulator, 0 
-        mov is_not_valid, 0
-        mov is_neg, 0
-        push dx
-        mov dx, offset enterData
-        mov ah, 0Ah
-        int 21h
-
-        mov al, enterData+2
-        cmp al, '-'
-        je is_negative
-        jne is_positive
-
-        is_positive:
-            call digit_validation
-            mov cl, enterData+1                 
-            mov si, offset enterData+1 
-            jmp valid_check
-
-        is_negative:
-            mov is_neg, 1
-            call digit_validation
-            mov cl, enterData+1                  
-            mov si, offset enterData+2 
-            dec cl
-        
-        valid_check:
-            cmp is_not_valid, 1
-            je end_scan_parse
-
-            cmp is_neg, 1  
-            je before_parse_loop
-
-            cmp enterData+1, 3
-            jg check_zero
-            jmp before_parse_loop
-            
-            check_zero:
-                mov al, enterData+2
-                cmp al, '0'
-                je before_parse_loop
-
-                out_of_range_error:
-                    mov is_not_valid, 1
-                    mov ah, 09h
-                    mov dx, offset out_of_range_error_msg
-                    int 21h
-                    jmp end_scan_parse
-
-        before_parse_loop:   
-            add si, cx   
-            mov ax, 0 
-            mov bx, 1
-
-        parse_loop:
-            mov ah, 0
-            mov al, [si]
-            sub ax, '0'
-            mul bx
-            add accumulator, ax
-            mov ax, bx
-            mov bx, 10
-            mul bx
-            mov bx, ax
-            dec si
-        loop parse_loop
-        
-        mov ax, accumulator
-        cmp is_neg, 1
-        jne end_scan_parse
-        neg ax
-
-        end_scan_parse:
-        pop dx
-        ret
-        endp scan_parse
-
-digit_validation proc
-        cmp is_neg, 1
-        je neg_validation
-        jne pos_validation
-
-        pos_validation:
-            mov si, offset enterData+2
-            mov cl, enterData+1
-            jmp validation_loop
-        
-        neg_validation:
-            mov si, offset enterData+3
-            mov cl, enterData+1
-            dec cl
-            jmp validation_loop
-        
-        
-        validation_loop:
-            mov al, [si]
-            cmp al, '0'
-            jl error
-            cmp al, '9'
-            jg error
-            inc si
-        loop validation_loop
-        ret
-
-        error:
-            mov ah, 09h
-            mov dx, offset error_msg
-            int 21h
-
-            mov is_not_valid, 1
-            ret
-    endp digit_validation
-
 scan_1d_array proc 
     array_size_loop:
-                mov dx, offset enter_1d_array_msg
-                mov ah, 09h
-                int 21h
+            mov min_range, 1
+            mov max_range, 10
 
-                call scan_parse
-                cmp is_not_valid, 1
-                je array_size_loop
-
-                cmp ax, 1
-                jl invalid_size_error
-
-
-                cmp ax, 10
-                jg invalid_size_error
-                
-                jmp after_size_input
-                invalid_size_error:
-                    mov dx, offset size_error_msg
-                    mov ah, 09h
-                    int 21h
-                    jmp array_size_loop
+            mov dx, offset enter_1d_array_msg
+            call scan_single_value
 
             after_size_input:
             mov array_size, ax
@@ -400,39 +269,6 @@ print_1d_array proc
 
     ret
 endp print_1d_array
-
-parse_print_num proc
-    mov cx, 0
-
-    cmp ax, 0
-    jge pre_convert_loop
-    mov save_num, ax
-    mov dl, '-'
-    mov ah, 02
-    int 21h
-
-    mov ax, save_num
-    neg ax
-
-    pre_convert_loop:
-    mov bx, 10  
-
-    convert_loop:
-        xor dx, dx
-        div bx
-        add dl, '0'
-        push dx
-        inc cx
-        cmp ax, 0
-        jne convert_loop
-
-    print_loop:
-            pop dx
-            mov ah, 02h
-            int 21h
-    loop print_loop
-    ret
-endp parse_print_num
 
 find_sum_of_array proc
     mov cx, array_size
@@ -772,6 +608,7 @@ print_2d_array proc
     int 21h
     ret
 endp print_2d_array
+
 array_2d_logic proc 
     cmp is_array_input, 1
     je after_input_2d
@@ -926,7 +763,7 @@ endp find_coordinates_2d
 
 ;Additional functions
 ; dx - string
- scan_single_value proc 
+scan_single_value proc 
     input_value_loop:
         push dx
         mov dx, offset new_line
@@ -959,4 +796,151 @@ endp find_coordinates_2d
         end_scan_single_value:
             ret
 endp scan_single_value
+
+parse_print_num proc
+    mov cx, 0
+
+    cmp ax, 0
+    jge pre_convert_loop
+    mov save_num, ax
+    mov dl, '-'
+    mov ah, 02
+    int 21h
+
+    mov ax, save_num
+    neg ax
+
+    pre_convert_loop:
+    mov bx, 10  
+
+    convert_loop:
+        xor dx, dx
+        div bx
+        add dl, '0'
+        push dx
+        inc cx
+        cmp ax, 0
+        jne convert_loop
+
+    print_loop:
+            pop dx
+            mov ah, 02h
+            int 21h
+    loop print_loop
+    ret
+endp parse_print_num
+
+scan_parse proc
+        mov accumulator, 0 
+        mov is_not_valid, 0
+        mov is_neg, 0
+        push dx
+        mov dx, offset enterData
+        mov ah, 0Ah
+        int 21h
+
+        mov al, enterData+2
+        cmp al, '-'
+        je is_negative
+        jne is_positive
+
+        is_positive:
+            call digit_validation
+            mov cl, enterData+1                 
+            mov si, offset enterData+1 
+            jmp valid_check
+
+        is_negative:
+            mov is_neg, 1
+            call digit_validation
+            mov cl, enterData+1                  
+            mov si, offset enterData+2 
+            dec cl
+        
+        valid_check:
+            cmp is_not_valid, 1
+            je end_scan_parse
+
+            cmp is_neg, 1  
+            je before_parse_loop
+
+            cmp enterData+1, 3
+            jg check_zero
+            jmp before_parse_loop
+            
+            check_zero:
+                mov al, enterData+2
+                cmp al, '0'
+                je before_parse_loop
+
+                out_of_range_error:
+                    mov is_not_valid, 1
+                    mov ah, 09h
+                    mov dx, offset out_of_range_error_msg
+                    int 21h
+                    jmp end_scan_parse
+
+        before_parse_loop:   
+            add si, cx   
+            mov ax, 0 
+            mov bx, 1
+
+        parse_loop:
+            mov ah, 0
+            mov al, [si]
+            sub ax, '0'
+            mul bx
+            add accumulator, ax
+            mov ax, bx
+            mov bx, 10
+            mul bx
+            mov bx, ax
+            dec si
+        loop parse_loop
+        
+        mov ax, accumulator
+        cmp is_neg, 1
+        jne end_scan_parse
+        neg ax
+
+        end_scan_parse:
+        pop dx
+        ret
+        endp scan_parse
+
+digit_validation proc
+        cmp is_neg, 1
+        je neg_validation
+        jne pos_validation
+
+        pos_validation:
+            mov si, offset enterData+2
+            mov cl, enterData+1
+            jmp validation_loop
+        
+        neg_validation:
+            mov si, offset enterData+3
+            mov cl, enterData+1
+            dec cl
+            jmp validation_loop
+        
+        
+        validation_loop:
+            mov al, [si]
+            cmp al, '0'
+            jl error
+            cmp al, '9'
+            jg error
+            inc si
+        loop validation_loop
+        ret
+
+        error:
+            mov ah, 09h
+            mov dx, offset error_msg
+            int 21h
+
+            mov is_not_valid, 1
+            ret
+    endp digit_validation
 END START

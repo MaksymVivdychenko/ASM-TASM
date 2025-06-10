@@ -282,18 +282,18 @@ find_sum_of_array proc
 
         loop find_sum_loop
 
-            mov save_num, ax
+    mov save_num, ax
 
-            mov dx, offset new_line
-            mov ah, 09h
-            int 21h
-            
-            mov dx, offset sum_array_smg
-            int 21h
+    mov dx, offset new_line
+    mov ah, 09h
+    int 21h
+    
+    mov dx, offset sum_array_smg
+    int 21h
 
-            mov ax, save_num
-            call parse_print_num
-            ret
+    mov ax, save_num
+    call parse_print_num
+    ret
 
 endp find_sum_of_array
 
